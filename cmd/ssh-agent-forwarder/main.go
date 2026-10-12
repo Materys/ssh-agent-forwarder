@@ -36,6 +36,15 @@ type ForwarderState struct {
 }
 
 func main() {
+	// Expose prometheus metrics (go/process collectors and the agent
+	// protocol counters) on the metrics port. Default to localhost: this
+	// binary runs on user machines, not inside the cluster.
+	metricsBind := os.Getenv("SSH_AGENT_FORWARDER_METRICS_BIND")
+	if metricsBind == "" {
+		metricsBind = "127.0.0.1:9090"
+	}
+	common.StartMetricsServer("[forwarder]", metricsBind)
+
 	fwstate := &ForwarderState{
 		realAgentSock: os.Getenv("SSH_AUTH_SOCK"),
 	}

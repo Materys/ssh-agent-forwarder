@@ -39,6 +39,15 @@ type EndpointState struct {
 }
 
 func main() {
+	// Expose prometheus metrics (go/process collectors and the agent
+	// protocol counters) on the metrics port. Default to localhost: this
+	// binary runs on user machines, not inside the cluster.
+	metricsBind := os.Getenv("SSH_AGENT_ENDPOINT_METRICS_BIND")
+	if metricsBind == "" {
+		metricsBind = "127.0.0.1:9090"
+	}
+	common.StartMetricsServer("[endpoint]", metricsBind)
+
 	endstate := &EndpointState{}
 	callbacks := common.RelayCallbacks{
 		Setup: func(relay *common.RelayStatus, _state interface{}, cfg *common.Config) error {

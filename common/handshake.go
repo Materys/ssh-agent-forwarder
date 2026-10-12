@@ -24,6 +24,10 @@ import (
 // DoHandshake performs the client handshake (forwarder/endpoint):
 // Sends hello (with role), waits for ack, validates ack nonce. Returns ack message and nonce.
 func DoHandshake(stream io.ReadWriter, uuid, role, token string, vinfo *VersionInfoData) (*ProtocolMessage, string, error) {
+	// record the handshake outcome in the metrics, for every return path
+	outcome := "failure"
+	defer func() { Handshakes.WithLabelValues(role, outcome).Inc() }()
+
 	nonce := randomHex(16)
 	helloMsg, _ := NewHelloMessage(uuid, role, nonce, token, vinfo.Version)
 	b, _ := helloMsg.Marshal(token)
@@ -48,12 +52,19 @@ func DoHandshake(stream io.ReadWriter, uuid, role, token string, vinfo *VersionI
 	if ackMsg.Nonce != nonce {
 		return nil, "", fmt.Errorf("ack nonce mismatch: got %q, want %q", ackMsg.Nonce, nonce)
 	}
+	outcome = "success"
 	return ackMsg, nonce, nil
 }
 
 // HandleHandshake performs the server handshake (platform):
 // Reads hello, validates, sends ack. Returns hello message.
 func HandleHandshake(stream io.ReadWriter, tokenLookup func(uuid string) (string, error), expectedRole []string, vinfo *VersionInfoData) (*ProtocolMessage, error) {
+	// record the handshake outcome in the metrics, for every return path;
+	// the role is only known once the hello message has been validated
+	role := "unknown"
+	outcome := "failure"
+	defer func() { Handshakes.WithLabelValues(role, outcome).Inc() }()
+
 	helloBuf, err := ReadLPMessage(stream, MaxAgentMessageSize)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read hello: %w", err)
@@ -62,6 +73,7 @@ func HandleHandshake(stream io.ReadWriter, tokenLookup func(uuid string) (string
 	if err != nil {
 		return nil, fmt.Errorf("handshake validation failed: %w", err)
 	}
+	role = helloMsg.Role
 
 	// Validate role
 	validrole := false
@@ -102,6 +114,7 @@ func HandleHandshake(stream io.ReadWriter, tokenLookup func(uuid string) (string
 	if err := WriteLPMessage(stream, ackBytes); err != nil {
 		return nil, fmt.Errorf("failed to write ack: %w", err)
 	}
+	outcome = "success"
 	return helloMsg, nil
 }
 

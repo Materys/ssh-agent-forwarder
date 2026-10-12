@@ -333,6 +333,7 @@ func ReadLPMessage(r io.Reader, maxLen int) ([]byte, error) {
 	if err := ReadFull(r, msg); err != nil {
 		return nil, err
 	}
+	RecordMessageBytes("read", msgLen)
 	return msg, nil
 }
 
@@ -351,6 +352,9 @@ func WriteLPMessage(w io.Writer, msg []byte) error {
 	if _, err := w.Write(lenBuf); err != nil {
 		return err
 	}
-	_, err := w.Write(msg)
-	return err
+	if _, err := w.Write(msg); err != nil {
+		return err
+	}
+	RecordMessageBytes("write", msgLen)
+	return nil
 }

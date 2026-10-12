@@ -70,6 +70,15 @@ type PlatformState struct {
 func main() {
 	log.Printf("[platform] Starting SSH Platform version %d", VersionInfo.Version)
 
+	// Expose prometheus metrics (go/process collectors and the agent
+	// protocol counters) on the metrics port. The endpoint is only
+	// reachable from inside the cluster.
+	metricsBind := os.Getenv("SSH_PLATFORM_METRICS_BIND")
+	if metricsBind == "" {
+		metricsBind = "0.0.0.0:9090"
+	}
+	common.StartMetricsServer("[platform]", metricsBind)
+
 	// Parse --config flag early
 	configPath := ""
 	for i, arg := range os.Args {
