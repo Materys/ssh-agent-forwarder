@@ -16,8 +16,8 @@ else
   SAN="DNS:$HOSTNAME"
 fi
 
-if [ -f "$CERTFILE" ] && [ -f "$KEYFILE" ]; then
-  echo "Certificate and key already exist: $CERTFILE $KEYFILE"
+if [ -f "${DESTDIR}/$CERTFILE" ] && [ -f "${DESTDIR}/$KEYFILE" ]; then
+  echo "Certificate and key already exist: ${DESTDIR}/$CERTFILE ${DESTDIR}/$KEYFILE"
   exit 0
 fi
 
